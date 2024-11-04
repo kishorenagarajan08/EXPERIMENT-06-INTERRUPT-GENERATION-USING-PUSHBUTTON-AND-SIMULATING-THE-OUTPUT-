@@ -1,114 +1,98 @@
-# EXPERIMENT--06-SQUARE-WAVE-GENERATION-AT-THE-OUTPUT-PIN-USING-TIMER
+# EXPERIMENT-06-INTERRUPT-GENERATION-USING-PUSHBUTTON-AND-SIMULATING-THE-OUTPUT
 
 ### Aim:
-To generate a PWM wave at the timer pin output and  simuate it on  proteus using an virtual oscilloscope  
+To Interface a push button and generate an interrupt , simulate it using an led and simuate it on  proteus 
 
 ### Components required:
 STM32 CUBE IDE, Proteus 8 simulator .
 
 ### Theory:
 
-The timer modules can operate a variety of modes one of which is the PWM mode. Where the timer gets clocked from an internal source and counts up to the auto-reload register value, then the output channel pin is driven HIGH. And it remains until the timer counts reach the CCRx register value, the match event causes the output channel pin to be driven LOW. And it remains until the timer counts up to the auto-reload register value, and so on.
+ARM v7 Core supports multiple great features for handling exceptions and interrupts. Which includes the Nested Vectored Interrupt Controller (NVIC).
 
-The resulting waveform is called PWM (pulse-width modulated) signal. Whose frequency is determined by the internal clock, the Prescaler, and the ARRx register. And its duty cycle is defined by the channel CCRx register value. The PWM doesn’t always have to be following this exact same procedure for PWM generation, however, it’s the very basic one and the easier to understand the concept. It’s called the up-counting PWM mode. We’ll discuss further advanced PWM generation techniques as we go on in this series of tutorials.
+Micro-Coded Architecture So that interrupt stacking, entry, and exit are done automatically in hardware. Which offloads this work overhead from the CPU
+### Processor Mode
 
-The following diagram shows you how the ARR value affects the period (frequency) of the PWM signal. And how the CCRx value affects the corresponding PWM signal’s duty cycle. And illustrates the whole process of PWM signal generation in the up-counting normal mode.
+The processor mode can change when exceptions occur. And it can be in one of the following modes:
+Thread Mode: Which is entered on reset.
+Handler Mode: Which is entered on all other exceptions.
+![image](https://github.com/vasanthkumarch/EXPERIMENT-06-INTERRUPT-GENERATION-USING-PUSHBUTTON-AND-SIMULATING-THE-OUTPUT-/assets/36288975/4f52f2d6-4cdb-4315-b2b2-b55dc1639c43)
+The STM32 ARM microcontroller interrupts are generated in the following manner:
 
-STM32 Timers – PWM Output Channels
+The system runs the ISR and then goes back to the main program. The NVIC and EXTI are configured. The Interrupt Service Routine (ISR) also known as the interrupt service routine handler is defined to enable the external interrupts.
 
-Each Capture/Compare channel is built around a capture/compare register (including a shadow register), an input stage for capture (with a digital filter, multiplexing, and Prescaler) and an output stage (with comparator and output control). The output stage generates an intermediate waveform which is then used for reference: OCxRef (active high). The polarity acts at the end of the chain.
+Let us learn about the important features which are needed to configure external interrupts in STM32 microcontrollers
 
-STM32 Timers In PWM Mode
+Interrupt Lines (EXTI0-EXTI15)
+The STM32 ARM microcontroller features 23 event sources which are divided into two sections. The first section corresponds t external pins on each port which are P0-P15. The second section corresponds to RTC, ethernet, USB interrupts. Therefore, in the first section, we have 16 lines corresponding to line0 till line15. All of these map to a pin number.
+The diagram below shows how the GPIO pins are connected to the 16 interrupt lines:
 
-Pulse width modulation mode allows generating a signal with a frequency determined by the value of the TIMx_ARR register and a duty cycle determined by the value of the TIMx_CCRx register. The PWM mode can be selected independently on each channel (one PWM per OCx output) by writing 110 (PWM mode 1) or ‘111 (PWM mode 2) in the OCxM bits in the TIMx_CCMRx register. The user must enable the corresponding preload register by setting the OCxPE bit in the TIMx_CCMRx register, and eventually the auto-reload preload register by setting the ARPE bit in the TIMx_CR1 register.
+![image](https://github.com/vasanthkumarch/EXPERIMENT-06-INTERRUPT-GENERATION-USING-PUSHBUTTON-AND-SIMULATING-THE-OUTPUT-/assets/36288975/3e1ededb-144c-4103-a64e-9132b7e06e1b)
 
-OCx polarity is software programmable using the CCxP bit in the TIMx_CCER register. It can be programmed as active high or active low. For applications where you need to generate complementary PWM signals, this option will be suitable for you.
+One important thing to note here is that same number pins are connected to line with the same number. All of these then join to form a single line. Additionally, we can not use two pins one one line at the same time. For example out of PA1, PB1, PC1, PD1, PE1, PF1 and PG1 you can only use a single pin out of all these. This is because they are all connected to the same line EXTI1. However you can use PA1 and PA2 at the same time as they are connected with different lines.
 
-In PWM mode (1 or 2), TIMx_CNT and TIMx_CCRx are always compared to determine whether TIMx_CCRx≤TIMx_CNT or TIMx_CNT≤TIMx_CCRx (depending on the direction of the counter).
-
-The timer is able to generate PWM in edge-aligned mode or center-aligned mode depending on the CMS bits in the TIMx_CR1 register.
-STM32 PWM Frequency
-
-In various applications, you’ll be in need to generate a PWM signal with a specific frequency. In servo motor control, LED drivers, motor drivers, and many more situations where you’ll be in need to set your desired frequency for the output PWM signal.
-
-The PWM period (1/FPWM) is defined by the following parameters: ARR value, the Prescaler value, and the internal clock itself which drives the timer module FCLK. The formula down below is to be used for calculating the FPWM for the output. You can set the clock you’re using, the Prescaler, and solve for the ARR value in order to control the FPWM and get what you want.
-
-STM32 PWM Frequency Formula - STM32 PWM Frequency Equation
-
-STM32 PWM Duty Cycle
-
-In normal settings, assuming you’re using the timer module in PWM mode and generating PWM signal in edge-aligned mode up-counting configuration. The duty cycle percentage is controlled by changing the value of the CCRx register. And the duty cycle equals (CCRx/ARR) [%].
-
+Now each of these lines EXTI0-EXTI15 can be used to trigger an interrupt on different modes of the signal : rising edge, falling edge or rising_falling edge.
 ## Procedure:
-Step1: Open CubeMX & Create New Project
-
-
-Step2: Choose The Target MCU & Double-Click Its Name select the target to be programmed  as shown below and click on next 
-
-Step3: Configure Timer2 Peripheral To Operate In PWM Mode With CH1 Output
-
-Step4: Set The RCC External Clock Source
-
-STM32 RCC External Clock Selection CubeMX
-
-Step5: Go To The Clock Configuration
-
-Step6: Set The System Clock To Be 72MHz
-
-Step7: Name & Generate The Project Initialization Code For CubeIDE or The IDE You’re Using
-
-
-
-Step8.  Creating Proteus project and running the simulation
+```
+1. click on STM 32 CUBE IDE, the following screen will appear 
+2. click on FILE, click on new stm 32 project 
+3. select the target to be programmed  as shown below and click on next 
+4.select the program name 
+5. corresponding ioc file will be generated automatically 
+6.select the appropriate pins as gipo, in or out, USART or required options and configure 
+7.click on cntrl+S , automaticall C program will be generated 
+8. edit the program and as per required 
+9. Select EXTI pin configuration and clock configuration 
+10. once the project is bulild 
+12.  Creating Proteus project and running the simulation
 We are now at the last part of step by step guide on how to simulate STM32 project in Proteus.
-
-Step9. Create a new Proteus project and place STM32F40xx i.e. the same MCU for which the project was created in STM32Cube IDE.  After creation of the circuit as per requirement as shown below 
-
-Step10. Double click on the the MCU part to open settings. Next to the Program File option, give full path to the Hex file generated using STM32Cube IDE. Then set the external crystal frequency to 8M (i.e. 8 MHz). Click OK to save the changes.
-
- 
-Step11. click on debug and simulate using simulation as shown below 
-
- 
-
-
+13. Create a new Proteus project and place STM32F40xx i.e. the same MCU for which the project was created in STM32Cube IDE. 
+14. After creation of the circuit as per requirement as shown below 
+14. Double click on the the MCU part to open settings. Next to the Program File option, give full path to the Hex file generated using STM32Cube IDE. Then set the external crystal frequency to 8M (i.e. 8 MHz). Click OK to save the changes.
+https://engineeringxpert.com/wp-content/uploads/2022/04/26.png
+15. click on debug and simulate using simulation as shown below 
+```
 ## STM 32 CUBE PROGRAM :
-```java
-#include "main.h"
+```
 
-TIM_HandleTypeDef htim2;
+Name: KISHORE N
+reg.no: 212223230106
+
+```
+```
+#include "main.h"
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_TIM2_Init(void);
 int main(void)
 {
-  HAL_Init();
-  SystemClock_Config();
-  MX_GPIO_Init();
-  MX_TIM2_Init();
-HAL_TIM_Base_Start(&htim2);
-HAL_TIM_PWM_Init(&htim2);
-HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
-
-  while (1)
-  {
+   HAL_Init();
+   SystemClock_Config();
+   MX_GPIO_Init();
+  while (1){
 
   }
+  }
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == GPIO_PIN_9)
+	{
+		HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_11);
+	}
 }
-  
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 84;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -127,56 +111,32 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
-static void MX_TIM2_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 84;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1000;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 500;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  HAL_TIM_MspPostInit(&htim2);
-
-}
-
 static void MX_GPIO_Init(void)
 {
-
-  /* GPIO Ports Clock Enable */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 }
 
 void Error_Handler(void)
 {
-  __disable_irq();
-  while (1)
-  {
+    __disable_irq();
+  while (1){
+
   }
-}
+  }
 
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line)
@@ -187,46 +147,15 @@ void assert_failed(uint8_t *file, uint32_t line)
 
 
 
-
 ## Output screen shots of proteus  :
-![image](https://github.com/user-attachments/assets/618a0743-8eba-46a0-bf44-6763f89b8b87)
-![image](https://github.com/user-attachments/assets/67018a4f-5e60-477e-9f9e-1fb3b02229dc)
-![image](https://github.com/user-attachments/assets/8f8d49e2-f4d2-44b2-ab64-b6ff97f1ce9e)
-![image](https://github.com/user-attachments/assets/a45c6386-54e0-4ec0-a15d-028d2e068ede)
+![Screenshot 2024-10-14 093323](https://github.com/user-attachments/assets/c50228e4-8e65-4a84-84de-81e61d23d4c4)
+
+![Screenshot 2024-10-14 093333](https://github.com/user-attachments/assets/638725fb-fbab-4529-b942-7d5c37e3b5ff)
 
  
  ## CIRCUIT DIAGRAM (EXPORT THE GRAPHICS TO PDF AND ADD THE SCREEN SHOT HERE): 
- ![image](https://github.com/user-attachments/assets/33528ff8-930f-47fa-9c60-37d8bf414b07)
+ ![Screenshot 2024-10-14 093401](https://github.com/user-attachments/assets/d00d5e0a-fbd9-4fce-94d9-918a657a87d8)
 
-
-## DUTY CYCLE AND FREQUENCY CALCULATION 
-FOR PULSE AT 500
-
-TON = 4
-TOFF= 4
-TOTAL TIME = 8
-FREQUENCY = 1/8
-
-FOR PULSE AT 700
-
-TON = 5.6
-TOFF=2.4
-TOTAL TIME = 8.0
-FREQUENCY = 1/8
-
-
-FOR PULSE AT 900
-
-TON = 7.2
-TOFF= 0.8
-TOTAL TIME = 8
-FREQUENCY = 1/8 
-
+ 
 ## Result :
-A PWM Signal is generated using the following frequency and various duty cycles are simulated 
-
-
-
-
-
-
+Interfacing a push button and interrupt genrateion is simulated using proteus 
